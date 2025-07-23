@@ -16,7 +16,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          apt install -y base-files dash libc-bin libc6:amd64 libpython3.8-minimal:amd64 libpython3.8-stdlib:amd64 locales ncurses-base python-is-python3 python3-zope.interface python3.10-minimal python3.8-distutils python3.8-minimal tzdata
+          sudo apt install -y base-files
       - run: |
           uv pip install --system -r requirements.txt coremltools openvino-dev tensorflow --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
           yolo checks
@@ -48,7 +48,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          apt install -y base-files cloud-init dash libc-bin libc6:amd64 libpython3.8-minimal:amd64 libpython3.8-stdlib:amd64 locales mercurial-common ncurses-base openssl python-is-python3 python3-apt python3-attr python3-automat python3-babel python3-bcrypt python3-blinker python3-certifi python3-chardet python3-click python3-colorama python3-commandnotfound python3-configobj python3-constantly python3-cryptography python3-dbus python3-debian python3-distro python3-distro-info python3-gi python3-hamcrest python3-httplib2 python3-hyperlink python3-idna python3-importlib-metadata python3-incremental python3-jeepney python3-jinja2 python3-json-pointer python3-jsonpatch python3-jsonschema python3-jwt python3-keyring python3-launchpadlib python3-lazr.restfulclient python3-lazr.uri python3-magic python3-markupsafe python3-minimal python3-more-itertools python3-netifaces:amd64 python3-oauthlib python3-openssl python3-packaging python3-parted python3-pexpect python3-ptyprocess python3-pyasn1 python3-pyasn1-modules python3-pygments python3-pyparsing python3-pyrsistent:amd64 python3-requests python3-secretstorage python3-serial python3-service-identity python3-setuptools python3-six python3-systemd python3-twisted python3-tz python3-urllib3 python3-wadllib python3-wheel python3-yaml python3-zipp python3-zope.interface python3.10-minimal python3.8-distutils python3.8-minimal sosreport ssh-import-id tzdata ubuntu-pro-client ufw walinuxagent
+          sudo apt install -y base-files
       - run: |
           torch=""
           if [ "1.8.0" == "1.8.0" ]; then
