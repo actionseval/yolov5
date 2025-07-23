@@ -18,7 +18,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          sudo apt install python3.8-distutils
+          # REMOVED 1 LINE
+          echo "temp"
       - run: |
           uv pip install --system -r requirements.txt coremltools openvino-dev tensorflow --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
           yolo checks
@@ -48,6 +49,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          
+      # ADDED 3 LINES
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          
       - name: Install Dependencies
         run: |
           torch=""
