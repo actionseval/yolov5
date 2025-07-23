@@ -1,0 +1,109 @@
+name: heuristic
+on: workflow_dispatch
+jobs:
+  Benchmarks:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - '3.8'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies
+        run: |
+          apt install -y base-files dash libc-bin libc6:amd64 libpython3.8-minimal:amd64 libpython3.8-stdlib:amd64 locales ncurses-base python-is-python3 python3-zope.interface python3.10-minimal python3.8-distutils python3.8-minimal tzdata
+      - run: |
+          uv pip install --system -r requirements.txt coremltools openvino-dev tensorflow --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+          yolo checks
+      - run: |
+          uv pip list
+          python benchmarks.py --data coco128.yaml --weights yolov5n.pt --img 320 --hard-fail 0.29
+          python benchmarks.py --data coco128-seg.yaml --weights yolov5n-seg.pt --img 320 --hard-fail 0.22
+      - run: |
+          python export.py --weights yolov5n-cls.pt --include onnx --img 224
+      - run: |
+          python detect.py --weights yolov5n.onnx --img 320
+      - run: |
+          python segment/predict.py --weights yolov5n-seg.onnx --img 320
+      - run: |
+          python classify/predict.py --weights yolov5n-cls.onnx --img 224
+    env: {}
+  Tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - '3.8'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies
+        run: |
+          apt install -y base-files cloud-init dash libc-bin libc6:amd64 libpython3.8-minimal:amd64 libpython3.8-stdlib:amd64 locales mercurial-common ncurses-base openssl python-is-python3 python3-apt python3-attr python3-automat python3-babel python3-bcrypt python3-blinker python3-certifi python3-chardet python3-click python3-colorama python3-commandnotfound python3-configobj python3-constantly python3-cryptography python3-dbus python3-debian python3-distro python3-distro-info python3-gi python3-hamcrest python3-httplib2 python3-hyperlink python3-idna python3-importlib-metadata python3-incremental python3-jeepney python3-jinja2 python3-json-pointer python3-jsonpatch python3-jsonschema python3-jwt python3-keyring python3-launchpadlib python3-lazr.restfulclient python3-lazr.uri python3-magic python3-markupsafe python3-minimal python3-more-itertools python3-netifaces:amd64 python3-oauthlib python3-openssl python3-packaging python3-parted python3-pexpect python3-ptyprocess python3-pyasn1 python3-pyasn1-modules python3-pygments python3-pyparsing python3-pyrsistent:amd64 python3-requests python3-secretstorage python3-serial python3-service-identity python3-setuptools python3-six python3-systemd python3-twisted python3-tz python3-urllib3 python3-wadllib python3-wheel python3-yaml python3-zipp python3-zope.interface python3.10-minimal python3.8-distutils python3.8-minimal sosreport ssh-import-id tzdata ubuntu-pro-client ufw walinuxagent
+      - run: |
+          torch=""
+          if [ "1.8.0" == "1.8.0" ]; then
+              torch="torch==1.8.0 torchvision==0.9.0"
+          fi
+          uv pip install --system -r requirements.txt $torch --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+          yolo checks
+      - run: |
+          pip list
+          m=yolov5n  # official weights
+          b=runs/train/exp/weights/best  # best.pt checkpoint
+          python train.py --imgsz 64 --batch 32 --weights $m.pt --cfg $m.yaml --epochs 1 --device cpu  # train
+          for d in cpu; do  # devices
+              for w in $m $b; do  # weights
+                  python val.py --imgsz 64 --batch 32 --weights $w.pt --device $d  # val
+                  python detect.py --imgsz 64 --weights $w.pt --device $d  # detect
+              done
+          done
+          python hubconf.py --model $m  # hub
+      - run: |
+          python models/yolo.py --cfg $m.yaml  # build PyTorch model
+          python export.py --weights $m.pt --img 64 --include torchscript  # export
+          python - <<EOF
+          import torch
+          im = torch.zeros([1, 3, 64, 64])
+          for path in '$m', '$b':
+              model = torch.hub.load('.', 'custom', path=path, source='local')
+              print(model('data/images/bus.jpg'))
+              model(im)  # warmup, build grids for trace
+              torch.jit.trace(model, [im])
+          EOF
+          m=yolov5n-seg  # official weights
+          b=runs/train-seg/exp/weights/best  # best.pt checkpoint
+          python segment/train.py --imgsz 64 --batch 32 --weights $m.pt --cfg $m.yaml --epochs 1 --device cpu  # train
+          python segment/train.py --imgsz 64 --batch 32 --weights '' --cfg $m.yaml --epochs 1 --device cpu  # train
+          for d in cpu; do  # devices
+              for w in $m $b; do  # weights
+                  python segment/val.py --imgsz 64 --batch 32 --weights $w.pt --device $d  # val
+                  python segment/predict.py --imgsz 64 --weights $w.pt --device $d  # predict
+                  python export.py --weights $w.pt --img 64 --include torchscript --device $d  # export
+              done
+          done
+          m=yolov5n-cls.pt  # official weights
+          b=runs/train-cls/exp/weights/best.pt  # best.pt checkpoint
+      - run: |
+          python classify/train.py --imgsz 32 --model $m --data mnist160 --epochs 1  # train
+          python classify/val.py --imgsz 32 --weights $b --data ../datasets/mnist160  # val
+      - run: |
+          python classify/predict.py --imgsz 32 --weights $b --source ../datasets/mnist160/test/7/60.png  # predict
+          python classify/predict.py --imgsz 32 --weights $m --source data/images/bus.jpg  # predict
+      - run: |
+          python export.py --weights $b --img 64 --include torchscript  # export
+          python - <<EOF
+          import torch
+          for path in '$m', '$b':
+              model = torch.hub.load('.', 'custom', path=path, source='local')
+          EOF
+    env: {}
