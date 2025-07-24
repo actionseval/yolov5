@@ -54,8 +54,13 @@ jobs:
           if [ "1.8.0" == "1.8.0" ]; then
               torch="torch==1.8.0 torchvision==0.9.0"
           fi
-          pip install --upgrade pip
-          pip install -r requirements.txt $torch --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+
+          # ADD 1
+          uv pip install --system -r requirements.txt $torch --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+
+          # REMOVE 2
+          #pip install --upgrade pip
+          #pip install -r requirements.txt $torch --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
 
       - name: Run tests
         run: |
