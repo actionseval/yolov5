@@ -11,9 +11,16 @@ jobs:
           - '3.11'
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+
+      # ADDED 3
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      
+      - uses: astral-sh/setup-uv@v5
+        # DELETED 2
+        # with:
+        #   python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
           sudo apt install -y base-files
@@ -46,6 +53,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # ADDED 1
+      - uses: astral-sh/setup-uv@v5
       - name: Install Dependencies
         run: |
           sudo apt install -y base-files
