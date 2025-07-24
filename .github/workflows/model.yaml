@@ -45,6 +45,9 @@ jobs:
         with:
           python-version: '3.8'
 
+      # ADDED
+      - uses: astral-sh/setup-uv@v6
+
       - name: Install dependencies
         run: |
           torch=""
