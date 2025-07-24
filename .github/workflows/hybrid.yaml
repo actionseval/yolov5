@@ -13,6 +13,12 @@ jobs:
           - '3.11'
     steps:
       - uses: actions/checkout@v4
+
+      # ADDED 3 LINES
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
